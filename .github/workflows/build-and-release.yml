@@ -38,7 +38,7 @@ jobs:
       - name: Build executable
         run: |
           .venv\Scripts\activate
-          pyinstaller --onefile --windowed --icon=assets/icon.ico fivem_launcher.py
+          pyinstaller fivem_launcher.spec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
