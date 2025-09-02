@@ -1,0 +1,53 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          .venv\Scripts\activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable
+        run: |
+          .venv\Scripts\activate
+          pyinstaller --onefile --windowed --icon=assets/icon.ico fivem_launcher.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fivem_launcher_exe
+          path: dist/fivem_launcher.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/fivem_launcher.exe
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Release ${{ github.event.inputs.version || github.ref_name }}
+          draft: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
