@@ -6,25 +6,13 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['win32com.client', 'winshell'],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'PIL', 'matplotlib', 'numpy', 'pandas', 'scipy', 'pytest', 
-        'setuptools', 'distutils', 'email', 'http', 'urllib3', 'xml',
-        'unittest', 'pydoc', 'doctest', 'argparse', 'multiprocessing',
-        'concurrent', 'asyncio', 'sqlite3', 'ssl', 'socket', 'select',
-        'mmap', 'pickle', 'zipfile', 'tarfile', 'gzip', 'bz2', 'lzma',
-        'csv', 'decimal', 'fractions', 'statistics', 'wave', 'chunk',
-        'sunau', 'aifc', 'sndhdr', 'colorsys', 'imghdr', 'turtle',
-        'tkinter.test', 'tkinter.dnd', 'tkinter.colorchooser', 
-        'tkinter.commondialog', 'tkinter.filedialog', 'tkinter.font',
-        'tkinter.scrolledtext', 'tkinter.simpledialog', 'tkinter.tix',
-        'tkinter.ttk'
-    ],
+    excludes=[],
     noarchive=False,
-    optimize=2,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 
@@ -37,8 +25,8 @@ exe = EXE(
     name='fivem_launcher',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
-    upx=False,  # UPX can cause issues with Windows Defender
+    strip=False,
+    upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -47,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/icon.ico',
+    icon=['C:\\Users\\sweat\\Desktop\\Fivem launcher\\assets\\icon.ico'],
 )

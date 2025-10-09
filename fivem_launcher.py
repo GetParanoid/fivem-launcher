@@ -7,6 +7,7 @@ import tempfile
 import threading
 import winshell
 from win32com.client import Dispatch
+import psutil
 
 #! Config stored in %APPDATA%/houseoffun/fivem_launcher/config.json
 APPDATA = os.getenv('APPDATA') or os.path.expanduser('~')
@@ -51,6 +52,94 @@ def load_config():
         return config
     with open(CONFIG_PATH, "r") as f:
         return json.load(f)
+
+def is_fxserver_running(fxserver_path):
+    """Check if FXServer is currently running"""
+    if not fxserver_path:
+        return False, None
+    
+    try:
+        fxserver_name = os.path.basename(fxserver_path).lower()
+        if fxserver_name.endswith('.exe'):
+            fxserver_name = fxserver_name[:-4]
+        
+        found_processes = []
+        for process in psutil.process_iter(['pid', 'name', 'exe']):
+            try:
+                if process.info['name']:
+                    process_name = process.info['name'].lower()
+                    if process_name.endswith('.exe'):
+                        process_name = process_name[:-4]
+                    
+                    if fxserver_name == process_name:
+                        if process.info['exe']:
+                            if os.path.normpath(process.info['exe']).lower() == os.path.normpath(fxserver_path).lower():
+                                found_processes.append(process.info['pid'])
+                        else:
+                            found_processes.append(process.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+        
+        if found_processes:
+            return True, found_processes[0]
+        
+        return False, None
+    except Exception:
+        return False, None
+
+def stop_fxserver(pid):
+    """Stop FXServer process by PID and close associated windows"""
+    try:
+        process = psutil.Process(pid)
+        
+        children = process.children(recursive=True)
+        
+        process.terminate()
+        
+        try:
+            process.wait(timeout=3)
+        except psutil.TimeoutExpired:
+            process.kill()
+        
+        for child in children:
+            try:
+                if child.is_running():
+                    child.terminate()
+                    try:
+                        child.wait(timeout=2)
+                    except psutil.TimeoutExpired:
+                        child.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        try:
+            import win32gui
+            import win32con
+            
+            def enum_windows_callback(hwnd, windows):
+                if win32gui.IsWindowVisible(hwnd):
+                    window_title = win32gui.GetWindowText(hwnd).lower()
+                    if 'fxserver' in window_title or 'fx server' in window_title:
+                        windows.append(hwnd)
+                return True
+            
+            windows = []
+            win32gui.EnumWindows(enum_windows_callback, windows)
+            
+            for hwnd in windows:
+                try:
+                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                except:
+                    pass
+                    
+        except ImportError:
+            pass
+        except Exception:
+            pass
+        
+        return True
+    except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+        return False
 
 def launch_fivem(fivem_path, connection, pure_mode, gamebuild):
     try:
@@ -109,6 +198,13 @@ def main():
             if server.get("type") == "dev":
                 state["dev_server"] = server
                 break
+        
+        #? Checks FXServer status
+        fxserver_path = new_config.get("local_server", {}).get("fxserver_path", "")
+        is_running, pid = is_fxserver_running(fxserver_path)
+        state["fxserver_running"] = is_running
+        state["fxserver_pid"] = pid
+        state["fxserver_path"] = fxserver_path
     update_state()
 
     root = tk.Tk()
@@ -211,21 +307,58 @@ def main():
         for widget in button_frame.winfo_children():
             widget.destroy()
 
-        #? Launch local server button
-        local_server_path = state["config"].get("local_server", {}).get("fxserver_path", "")
+        #? Launch/Stop local server buttons
+        local_server_path = state["fxserver_path"]
+        
         def launch_local_server():
             if local_server_path:
                 try:
                     subprocess.Popen(['explorer.exe', local_server_path], shell=False)
+                    #? Refresh state to detect new process
+                    def refresh_after_launch():
+                        import time
+                        time.sleep(2)  
+                        update_state()
+                        render_buttons()
+                    threading.Thread(target=refresh_after_launch, daemon=True).start()
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to launch local server: {e}")
             else:
                 messagebox.showwarning("Not Configured", "Local server path not set in config.json.")
+        
+        def stop_local_server():
+            if state["fxserver_pid"]:
+                try:
+                    success = stop_fxserver(state["fxserver_pid"])
+                    if success:
+                        #? Wait for windows to close, then refresh state
+                        def refresh_after_stop():
+                            import time
+                            time.sleep(1)
+                            update_state()
+                            render_buttons()
+                        threading.Thread(target=refresh_after_stop, daemon=True).start()
+                    else:
+                        # ? Refresh state just in case
+                        update_state()
+                        render_buttons()
+                except Exception as e:
+                    #? Refresh state anyway, fuck it
+                    update_state()
+                    render_buttons()
+        
+        #? Show button based on FXServer running or not
         if local_server_path:
-            local_btn = tk.Button(button_frame, text="Launch Local Server", font=("Arial", 10, "bold"),
-                                bg=accent_color, fg=fg_color, activebackground=select_bg, activeforeground=select_fg,
-                                bd=0, relief=tk.FLAT, command=launch_local_server)
-            local_btn.pack(fill=tk.X, padx=8, pady=(0,4))
+            if state["fxserver_running"]:
+                stop_btn = tk.Button(button_frame, text="Stop Local Server", font=("Arial", 10, "bold"),
+                                    bg="#660000", fg=fg_color, activebackground="#880000", activeforeground=select_fg,
+                                    bd=0, relief=tk.FLAT, command=stop_local_server)
+                stop_btn.pack(fill=tk.X, padx=8, pady=(0,4))
+            else:
+                local_btn = tk.Button(button_frame, text="Launch Local Server", font=("Arial", 10, "bold"),
+                                    bg=accent_color, fg=fg_color, activebackground=select_bg, activeforeground=select_fg,
+                                    bd=0, relief=tk.FLAT, command=launch_local_server)
+                local_btn.pack(fill=tk.X, padx=8, pady=(0,4))
 
         #? cl2 logic
         if state["config"].get("cl2", False) and state["dev_server"]:
