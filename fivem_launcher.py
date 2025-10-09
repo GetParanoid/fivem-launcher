@@ -393,6 +393,34 @@ def restore_default_settings():
     except Exception as e:
         print(f"Failed to restore default settings: {e}")
 
+class ToolTip:
+    """Create a tooltip for a given widget"""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+    
+    def show_tooltip(self, event=None):
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 25
+        
+        self.tooltip = tk.Toplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        self.tooltip.attributes('-topmost', True)
+        
+        label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", 
+                        relief=tk.SOLID, borderwidth=1, font=("Arial", 8), padx=4, pady=2)
+        label.pack()
+    
+    def hide_tooltip(self, event=None):
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
+
 def launch_fivem(fivem_path, connection, pure_mode, gamebuild, mod_preset=None):
     try:
         #? Sync mods and settings before launching
@@ -513,6 +541,7 @@ def main():
 
     #? Action buttons
     btn_style = {'bg': btn_color, 'fg': fg_color, 'activebackground': btn_hover, 'activeforeground': fg_color, 'bd': 0, 'width': 3, 'height': 1, 'font': ('Arial', 10, 'bold')}
+    emoji_btn_style = {'bg': btn_color, 'fg': fg_color, 'activebackground': btn_hover, 'activeforeground': fg_color, 'bd': 0, 'width': 3, 'height': 1, 'font': ('Segoe UI Emoji', 10)}
     def on_close():
         root.destroy()
     def on_edit():
@@ -520,6 +549,11 @@ def main():
             os.startfile(CONFIG_PATH)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open config: {e}")
+    def on_open_folder():
+        try:
+            os.startfile(CONFIG_DIR)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open config folder: {e}")
     def on_refresh():
         new_config = load_config()
         update_state(new_config)
@@ -529,12 +563,21 @@ def main():
             listbox.insert(tk.END, display)
         render_buttons()
 
-    btn_close = tk.Button(topbar, text='✕', command=on_close, **btn_style)
+    btn_close = tk.Button(topbar, text='❌', command=on_close, **emoji_btn_style)
     btn_close.pack(side=tk.RIGHT, padx=0)
-    btn_refresh = tk.Button(topbar, text='⟳', command=on_refresh, **btn_style)
+    ToolTip(btn_close, "Close")
+    
+    btn_refresh = tk.Button(topbar, text='🔄', command=on_refresh, **emoji_btn_style)
     btn_refresh.pack(side=tk.RIGHT, padx=0)
-    btn_edit = tk.Button(topbar, text='✎', command=on_edit, **btn_style)
+    ToolTip(btn_refresh, "Refresh")
+    
+    btn_folder = tk.Button(topbar, text='📁', command=on_open_folder, **emoji_btn_style)
+    btn_folder.pack(side=tk.RIGHT, padx=0)
+    ToolTip(btn_folder, "Open Config Folder")
+    
+    btn_edit = tk.Button(topbar, text='✏️', command=on_edit, **emoji_btn_style)
     btn_edit.pack(side=tk.RIGHT, padx=0)
+    ToolTip(btn_edit, "Edit Config")
 
     #? Listbox
     listbox = tk.Listbox(root, font=("Arial", 11, "bold"), bg=accent_color, fg=fg_color,
