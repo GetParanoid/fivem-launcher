@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - 'main'
+    paths:
+      - 'fivem_launcher.py'
+      - 'fivem_launcher.spec'
+      - 'requirements.txt'
+      - 'assets/**'
     tags:
       - 'v*.*.*'
   workflow_dispatch:

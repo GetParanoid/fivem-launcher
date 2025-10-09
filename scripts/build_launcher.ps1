@@ -18,6 +18,23 @@ if (Test-Path $venvActivate) {
 Write-Host "Installing required packages..."
 pip install pyinstaller
 
+#? Kill any running instances of the launcher
+Write-Host "Checking for running instances of fivem_launcher.exe..."
+$processes = Get-Process -Name "fivem_launcher" -ErrorAction SilentlyContinue
+if ($processes) {
+    Write-Host "Stopping running instances..."
+    $processes | Stop-Process -Force
+    Start-Sleep -Seconds 1
+}
+
+#? Clean up old build artifacts
+$distPath = Join-Path $rootDir "dist/fivem_launcher.exe"
+if (Test-Path $distPath) {
+    Write-Host "Removing old executable..."
+    Remove-Item $distPath -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+}
+
 #? Build exe
 Write-Host "Building the executable with PyInstaller and custom icon..."
 $iconPath = Join-Path $rootDir "assets/icon.ico"
