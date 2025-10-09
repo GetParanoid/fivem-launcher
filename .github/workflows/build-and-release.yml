@@ -2,6 +2,8 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - 'main'
     tags:
       - 'v*.*.*'
   workflow_dispatch:
@@ -47,11 +49,12 @@ jobs:
           path: dist/fivem_launcher.exe
 
       - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/fivem_launcher.exe
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
           name: Release ${{ github.event.inputs.version || github.ref_name }}
-          draft: ${{ github.event_name == 'workflow_dispatch' }}
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
