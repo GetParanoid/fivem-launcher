@@ -185,31 +185,43 @@ def get_all_files_recursive(directory):
     return files
 
 def is_hardlink(path1, path2):
-    """Check if two paths are hardlinks to the same file"""
+    """Check if two paths are hardlinks to the same file with matching content"""
     try:
         if not os.path.exists(path1) or not os.path.exists(path2):
             return False
         stat1 = os.stat(path1)
         stat2 = os.stat(path2)
-        #? On Windows, check if they have the same file index and volume serial number
+        #? On Windows, check if they have the same file index, volume serial number, size, and modification time
         return (stat1.st_ino == stat2.st_ino and 
                 stat1.st_dev == stat2.st_dev and
-                stat1.st_nlink > 1)
+                stat1.st_nlink > 1 and
+                stat1.st_size == stat2.st_size and
+                stat1.st_mtime == stat2.st_mtime)
     except:
         return False
 
 def create_hardlink(src, dst):
     """Create a hardlink from src to dst"""
     try:
-        #? Remove destination if it exists
+        #? If destination exists, check if it needs updating
         if os.path.exists(dst):
-            os.remove(dst)
+            #? Remove if it's not a valid hardlink to the source
+            if not is_hardlink(src, dst):
+                try:
+                    os.remove(dst)
+                except PermissionError:
+                    #? File might be in use, skip it
+                    print(f"Warning: Cannot update {dst} - file is in use")
+                    return False
         
         #? Create parent directory if needed
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         
         #? Create hardlink
         os.link(src, dst)
+        return True
+    except FileExistsError:
+        #? Hardlink already exists and is valid
         return True
     except Exception as e:
         print(f"Failed to create hardlink from {src} to {dst}: {e}")
