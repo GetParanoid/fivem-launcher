@@ -184,6 +184,19 @@ def get_all_files_recursive(directory):
     
     return files
 
+def calculate_file_hash(file_path, chunk_size=8192):
+    """Calculate SHA256 hash of a file"""
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(chunk_size), b""):
+                sha256_hash.update(chunk)
+        return sha256_hash.hexdigest()
+    except Exception as e:
+        print(f"Failed to hash {file_path}: {e}")
+        return None
+
 def is_hardlink(path1, path2):
     """Check if two paths are hardlinks to the same file with matching content"""
     try:
@@ -191,12 +204,33 @@ def is_hardlink(path1, path2):
             return False
         stat1 = os.stat(path1)
         stat2 = os.stat(path2)
-        #? On Windows, check if they have the same file index, volume serial number, size, and modification time
-        return (stat1.st_ino == stat2.st_ino and 
-                stat1.st_dev == stat2.st_dev and
-                stat1.st_nlink > 1 and
-                stat1.st_size == stat2.st_size and
-                stat1.st_mtime == stat2.st_mtime)
+        
+        #? Basic hardlink checks
+        is_same_link = (stat1.st_ino == stat2.st_ino and 
+                        stat1.st_dev == stat2.st_dev and
+                        stat1.st_nlink > 1)
+        
+        if not is_same_link:
+            return False
+        
+        #? Size check
+        if stat1.st_size != stat2.st_size:
+            return False
+        
+        #? Modification time check
+        if stat1.st_mtime != stat2.st_mtime:
+            return False
+        
+        #? For small files (< 50MB), verify hash to be absolutely sure
+        #? This catches cases where files were replaced with same size/mtime
+        file_size_mb = stat1.st_size / (1024 * 1024)
+        if file_size_mb < 50:
+            hash1 = calculate_file_hash(path1)
+            hash2 = calculate_file_hash(path2)
+            if hash1 and hash2 and hash1 != hash2:
+                return False
+        
+        return True
     except:
         return False
 
