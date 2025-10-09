@@ -53,6 +53,7 @@ def load_config():
             preset_path = os.path.join(modpresets_dir, preset)
             os.makedirs(os.path.join(preset_path, 'mods'), exist_ok=True)
             os.makedirs(os.path.join(preset_path, 'plugins'), exist_ok=True)
+            os.makedirs(os.path.join(preset_path, 'plugins', 'reshade-presets'), exist_ok=True)
             os.makedirs(os.path.join(preset_path, 'settings'), exist_ok=True)
     
     if not os.path.exists(CONFIG_PATH):

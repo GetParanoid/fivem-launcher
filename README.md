@@ -66,7 +66,15 @@ Made to help dev workflow & stop annoying relaunches if you play on multiple ser
 3. Inside, you can add:
    - `mods/` folder - Place your FiveM mods here
    - `plugins/` folder - Place your FiveM plugins here
+   - `plugins/reshade-presets/` folder - Place ReShade preset files
    - `settings/gta5_settings.xml` - Copy your desired game settings here
+
+### ReShade Support
+The launcher fully supports ReShade with preset management:
+- Place ReShade DLL (e.g., `dxgi.dll`) in your preset's `plugins/` folder at `%APPDATA%/houseoffun/fivem_launcher/modpresets/[PresetName]/plugins/`
+- Place ReShade preset INI files in `%APPDATA%/houseoffun/fivem_launcher/modpresets/[PresetName]/plugins/reshade-presets/`
+- All subdirectories are supported and will maintain their structure
+- Since hardlinks are used, editing ReShade presets in-game automatically updates your preset folder!
 
 ### Example Preset Structure
 ```
@@ -75,17 +83,24 @@ modpresets/
 │   ├── mods/
 │   │   └── my-cool-mod.asi
 │   ├── plugins/
-│   │   └── some-plugin.dll
+│   │   ├── dxgi.dll
+│   │   ├── ReShadePreset.ini
+│   │   └── reshade-presets/
+│   │       ├── MyPreset1.ini
+│   │       ├── MyPreset2.ini
 │   └── settings/
 │       └── gta5_settings.xml
 ├── LowPerformance/
 │   ├── mods/
 │   ├── plugins/
+│   │   └── reshade-presets/
 │   └── settings/
 │       └── gta5_settings.xml
 └── DevMode/
     ├── mods/
-    └── plugins/
+    ├── plugins/
+    │   └── reshade-presets/
+    └── settings/
 ```
 
 ### How It Works
